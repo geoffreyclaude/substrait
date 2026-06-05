@@ -1,0 +1,12 @@
+# Nullary CLASSIFIER() metadata expression.
+#
+# message RowPatternExpression
+
+classifier {
+}
+
+output_type {
+  string {
+    nullability: NULLABILITY_NULLABLE
+  }
+}

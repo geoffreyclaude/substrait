@@ -604,6 +604,186 @@ enum FetchMode {
   FETCH_MODE_WITH_TIES = 2;
 }
 
+// The SQL row pattern recognition relational operator, corresponding to the
+// core shape of MATCH_RECOGNIZE.  The initial schema surface is deliberately
+// narrow: one input relation, input-rooted partition/order fields, explicit
+// rows-per-match and skip modes, a primary-variable row pattern, DEFINE
+// predicates, and measure expressions.
+message MatchRecognizeRel {
+  // Producers using the initial surface should use RelCommon.direct.
+  // RelCommon.emit is not supported for this relation in the initial surface;
+  // use a parent relation to reshape outputs.
+  RelCommon common = 1;
+
+  // Input relation whose rows are partitioned, ordered, and matched.
+  Rel input = 2;
+
+  // Partition keys.  In the initial surface these must be input-rooted field
+  // references.
+  repeated Expression partition_expressions = 3;
+
+  // Ordering keys within each partition.  In the initial surface these must be
+  // input-rooted field references with explicit direction and null ordering.
+  repeated SortField sorts = 4;
+
+  // Measure expressions emitted by the relation.
+  repeated RowPatternMeasure measures = 5;
+
+  // Rows-per-match mode.  Producers must set this explicitly.  The initial
+  // surface accepts only RowsPerMatch.one_row.
+  RowsPerMatch rows_per_match = 6;
+
+  // Where matching resumes after a non-empty match.  Producers must set this
+  // explicitly.  After an empty match, matching resumes at the next input row
+  // to guarantee progress.
+  AfterMatchSkip after_match_skip = 7;
+
+  // Row pattern to match against each ordered partition.
+  RowPattern pattern = 8;
+
+  // DEFINE predicates keyed by primary pattern variable name.  A primary
+  // variable without a definition is interpreted as TRUE.
+  repeated PatternDefinition definitions = 9;
+
+  substrait.extensions.AdvancedExtension advanced_extension = 10;
+}
+
+// A DEFINE predicate for a primary row-pattern variable.
+message PatternDefinition {
+  string pattern_variable = 1;
+  Expression condition = 2;
+}
+
+// A measure produced by a MatchRecognizeRel.
+message RowPatternMeasure {
+  // Output field name for this measure.
+  string name = 1;
+
+  // Expression evaluated in the row-pattern recognition context.
+  Expression expression = 2;
+}
+
+// Rows-per-match output mode.
+message RowsPerMatch {
+  oneof mode {
+    RowsPerMatchOneRow one_row = 1;
+  }
+}
+
+// Emit one output row for each match.
+message RowsPerMatchOneRow {}
+
+// Resume position after a non-empty match.  Empty matches always resume at the
+// next input row to guarantee progress.
+message AfterMatchSkip {
+  oneof target {
+    AfterMatchSkipNextRow next_row = 1;
+    AfterMatchSkipPastLastRow past_last_row = 2;
+  }
+}
+
+// Resume matching at the row following the first row of the previous match.
+message AfterMatchSkipNextRow {}
+
+// Resume matching at the row following the last row of the previous match.
+message AfterMatchSkipPastLastRow {}
+
+// Row pattern AST.  The initial surface supports primary variables,
+// concatenation, alternation, grouping, boundary anchors, and greedy
+// quantifiers.
+message RowPattern {
+  oneof pattern_type {
+    PatternVariable variable = 1;
+    PatternAnchor anchor = 2;
+    PatternConcat concat = 3;
+    PatternAlternation alternation = 4;
+    PatternGroup group = 5;
+    PatternQuantified quantified = 6;
+  }
+}
+
+// A primary row-pattern variable.
+message PatternVariable {
+  string name = 1;
+}
+
+// Boundary anchor within a row pattern.
+message PatternAnchor {
+  enum AnchorKind {
+    ANCHOR_KIND_UNSPECIFIED = 0;
+    ANCHOR_KIND_START = 1;
+    ANCHOR_KIND_END = 2;
+  }
+
+  AnchorKind kind = 1;
+}
+
+// Concatenation of two or more row patterns.
+message PatternConcat {
+  repeated RowPattern patterns = 1;
+}
+
+// Alternation across two or more row patterns.
+message PatternAlternation {
+  repeated RowPattern alternatives = 1;
+}
+
+// Explicit grouping within a row pattern.
+message PatternGroup {
+  RowPattern pattern = 1;
+}
+
+// A row pattern with a greedy quantifier.
+message PatternQuantified {
+  RowPattern pattern = 1;
+  PatternQuantifier quantifier = 2;
+}
+
+// Greedy row-pattern quantifier.  Use lower_bound = 0 and
+// unbounded_upper for '*', lower_bound = 1 and unbounded_upper for '+',
+// and lower_bound = 0 with upper_bound = 1 for '?'.
+message PatternQuantifier {
+  oneof lower {
+    uint32 lower_bound = 1;
+    QuantifierOmittedLowerBound omitted_lower_bound = 2;
+  }
+
+  oneof upper {
+    uint32 upper_bound = 3;
+    QuantifierUnboundedUpper unbounded_upper = 4;
+  }
+}
+
+// An omitted lower bound in a bounded row-pattern quantifier.
+message QuantifierOmittedLowerBound {}
+
+// An unbounded upper bound in a row-pattern quantifier.
+message QuantifierUnboundedUpper {}
+
+// Reference to a primary row-pattern variable.
+message PatternVariableRef {
+  string name = 1;
+}
+
+// Metadata expression evaluated in a MatchRecognizeRel MEASURES expression.
+message RowPatternExpression {
+  oneof expression_type {
+    RowPatternClassifier classifier = 1;
+    RowPatternMatchNumber match_number = 2;
+  }
+
+  // The type of the metadata expression.
+  Type output_type = 8;
+
+  substrait.extensions.AdvancedExtension advanced_extension = 10;
+}
+
+// Nullary CLASSIFIER() metadata expression.
+message RowPatternClassifier {}
+
+// Nullary MATCH_NUMBER() metadata expression.
+message RowPatternMatchNumber {}
+
 // A relation with output field names.
 //
 // This is for use at the root of a `Rel` tree.
@@ -641,6 +821,7 @@ message Rel {
     ExchangeRel exchange = 15;
     ExpandRel expand = 16;
     TopNRel top_n = 23;
+    MatchRecognizeRel match_recognize = 24;
   }
 }
 
@@ -1055,6 +1236,7 @@ message Expression {
     Lambda lambda = 15;
     LambdaInvocation lambda_invocation = 16;
     ExecutionContextVariable execution_context_variable = 17;
+    RowPatternExpression row_pattern = 18;
   }
 
   message Literal {
@@ -1637,6 +1819,7 @@ message Expression {
       RootReference root_reference = 4;
       OuterReference outer_reference = 5;
       LambdaParameterReference lambda_parameter_reference = 6;
+      RowPatternVariableReference row_pattern_variable_reference = 7;
     }
 
     // Singleton that expresses this FieldReference is rooted off the root
@@ -1670,6 +1853,12 @@ message Expression {
       //   1 = one lambda level out (outer lambda's parameters as a struct)
       //   2 = two lambda levels out, etc.
       uint32 steps_out = 1;
+    }
+
+    // A reference to the row bound to a primary row-pattern variable within a
+    // MatchRecognizeRel DEFINE or MEASURES expression.
+    message RowPatternVariableReference {
+      PatternVariableRef pattern_variable = 1;
     }
   }
 

@@ -1,0 +1,95 @@
+# MATCH_RECOGNIZE example for anchors, grouping, and alternation.
+#
+# message MatchRecognizeRel
+
+common {
+  direct {
+  }
+}
+
+input {
+  read {
+    common {
+      direct {
+      }
+    }
+    base_schema {
+      names: "ts"
+      names: "price"
+      struct {
+        types {
+          i64 {
+            nullability: NULLABILITY_REQUIRED
+          }
+        }
+        types {
+          fp64 {
+            nullability: NULLABILITY_NULLABLE
+          }
+        }
+        nullability: NULLABILITY_REQUIRED
+      }
+    }
+    named_table {
+      names: "market_data"
+    }
+  }
+}
+
+sorts {
+  expr {
+    selection {
+      root_reference {
+      }
+      direct_reference {
+        struct_field {
+          field: 0
+        }
+      }
+    }
+  }
+  direction: SORT_DIRECTION_ASC_NULLS_LAST
+}
+
+rows_per_match {
+  one_row {
+  }
+}
+
+after_match_skip {
+  next_row {
+  }
+}
+
+pattern {
+  concat {
+    patterns {
+      anchor {
+        kind: ANCHOR_KIND_START
+      }
+    }
+    patterns {
+      group {
+        pattern {
+          alternation {
+            alternatives {
+              variable {
+                name: "A"
+              }
+            }
+            alternatives {
+              variable {
+                name: "B"
+              }
+            }
+          }
+        }
+      }
+    }
+    patterns {
+      anchor {
+        kind: ANCHOR_KIND_END
+      }
+    }
+  }
+}

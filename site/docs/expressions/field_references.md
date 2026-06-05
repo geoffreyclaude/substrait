@@ -8,6 +8,7 @@ Field references can originate from different root types:
 - **OuterReference**: References outer query records in correlated subqueries, supporting either offset-based (`steps_out`) or id-based (`rel_reference`) resolution (see [Outer References](#outer-references))
 - **Expression**: References the result of evaluating an expression
 - **LambdaParameterReference**: References lambda parameters within lambda body expressions (see [Lambda Expressions](lambda_expressions.md))
+- **RowPatternVariableReference**: References the row bound to a primary row-pattern variable inside `DEFINE` and `MEASURES` expressions of a [`MatchRecognizeRel`](../relations/match_recognize.md)
 
 | Reference Type            | Properties                                                   | Type Applicability | Type return                |
 | ------------------------- | ------------------------------------------------------------ | ------------------ | -------------------------- |
@@ -212,3 +213,40 @@ ProjectRel [rel_anchor=7] # Correct binding for tableA.a for the outer reference
         │       └── ReferenceRel(0) # Reference 1: rel_reference = 7
         └── ReferenceRel(0) # Reference 2: rel_reference = 7
 ```
+
+### Row Pattern Variable References
+
+Row pattern variable references allow `DEFINE` and `MEASURES` expressions of a
+`MatchRecognizeRel` to access fields from a row bound to a primary pattern
+variable. This is the Substrait representation for scoped SQL references such
+as `A.price`.
+
+The pattern variable is carried in `RowPatternVariableReference`; the selected
+input field is still navigated with the normal `direct_reference` path. Ordinary
+table qualifiers are not interpreted as pattern variables.
+
+=== "RowPatternVariableReference Message"
+
+    ```proto
+%%% proto.message.Expression.FieldReference.RowPatternVariableReference %%%
+    ```
+
+```protobuf
+--8<-- "examples/proto-textformat/field_reference/row_pattern_variable_reference.textproto"
+```
+
+`RowPatternVariableReference` is valid only inside `DEFINE` and `MEASURES`
+expressions of a `MatchRecognizeRel`; it is not valid in `PARTITION BY`,
+`ORDER BY`, or ordinary relations. The referenced pattern variable must resolve
+to a primary variable in that relation's pattern, and the direct reference path
+resolves against the input relation schema.
+
+In the initial surface, direct row-pattern variable references are valid only
+when the referenced variable denotes at most one row in the expression context.
+If the variable denotes zero rows for an empty or optional portion of a match,
+the reference evaluates to null. Multi-row variable references require follow-up
+navigation or row-pattern aggregate support.
+
+The effective type of a row-pattern variable reference is derived from the
+selected input field, with nullability widened to nullable when the referenced
+variable can denote zero rows in the expression context.

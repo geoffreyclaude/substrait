@@ -7,6 +7,7 @@ supported_relations:
   - AGGREGATE
   - FETCH
   - FILTER
+  - MATCH_RECOGNIZE
   - PROJECT
   - SORT
   - relation: JOIN
@@ -21,4 +22,3 @@ supported_relations:
   - relation: EXTENSION_LEAF
     message_types:
       - type.googleapis.com/google.profile.Person
-

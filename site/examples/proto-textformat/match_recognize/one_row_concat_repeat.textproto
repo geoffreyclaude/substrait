@@ -1,0 +1,140 @@
+# MATCH_RECOGNIZE example for pattern A B+
+#
+# message MatchRecognizeRel
+
+common {
+  direct {
+  }
+}
+
+input {
+  read {
+    common {
+      direct {
+      }
+    }
+    base_schema {
+      names: "company"
+      names: "ts"
+      names: "price"
+      struct {
+        types {
+          string {
+            nullability: NULLABILITY_REQUIRED
+          }
+        }
+        types {
+          i64 {
+            nullability: NULLABILITY_REQUIRED
+          }
+        }
+        types {
+          fp64 {
+            nullability: NULLABILITY_NULLABLE
+          }
+        }
+        nullability: NULLABILITY_REQUIRED
+      }
+    }
+    named_table {
+      names: "market_data"
+    }
+  }
+}
+
+partition_expressions {
+  selection {
+    root_reference {
+    }
+    direct_reference {
+      struct_field {
+        field: 0
+      }
+    }
+  }
+}
+
+sorts {
+  expr {
+    selection {
+      root_reference {
+      }
+      direct_reference {
+        struct_field {
+          field: 1
+        }
+      }
+    }
+  }
+  direction: SORT_DIRECTION_ASC_NULLS_LAST
+}
+
+measures {
+  name: "a_price"
+  expression {
+    selection {
+      row_pattern_variable_reference {
+        pattern_variable {
+          name: "A"
+        }
+      }
+      direct_reference {
+        struct_field {
+          field: 2
+        }
+      }
+    }
+  }
+}
+
+rows_per_match {
+  one_row {
+  }
+}
+
+after_match_skip {
+  past_last_row {
+  }
+}
+
+pattern {
+  concat {
+    patterns {
+      variable {
+        name: "A"
+      }
+    }
+    patterns {
+      quantified {
+        pattern {
+          variable {
+            name: "B"
+          }
+        }
+        quantifier {
+          lower_bound: 1
+          unbounded_upper {
+          }
+        }
+      }
+    }
+  }
+}
+
+definitions {
+  pattern_variable: "A"
+  condition {
+    literal {
+      boolean: true
+    }
+  }
+}
+
+definitions {
+  pattern_variable: "B"
+  condition {
+    literal {
+      boolean: true
+    }
+  }
+}

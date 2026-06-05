@@ -1,0 +1,12 @@
+# Nullary MATCH_NUMBER() metadata expression.
+#
+# message RowPatternExpression
+
+match_number {
+}
+
+output_type {
+  i64 {
+    nullability: NULLABILITY_REQUIRED
+  }
+}

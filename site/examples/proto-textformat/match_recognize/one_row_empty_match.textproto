@@ -1,0 +1,120 @@
+# MATCH_RECOGNIZE example for an empty-capable one-row pattern A?.
+#
+# message MatchRecognizeRel
+
+common {
+  direct {
+  }
+}
+
+input {
+  read {
+    common {
+      direct {
+      }
+    }
+    base_schema {
+      names: "ts"
+      names: "price"
+      struct {
+        types {
+          i64 {
+            nullability: NULLABILITY_REQUIRED
+          }
+        }
+        types {
+          fp64 {
+            nullability: NULLABILITY_REQUIRED
+          }
+        }
+        nullability: NULLABILITY_REQUIRED
+      }
+    }
+    named_table {
+      names: "market_data"
+    }
+  }
+}
+
+sorts {
+  expr {
+    selection {
+      root_reference {
+      }
+      direct_reference {
+        struct_field {
+          field: 0
+        }
+      }
+    }
+  }
+  direction: SORT_DIRECTION_ASC_NULLS_LAST
+}
+
+measures {
+  name: "a_price"
+  expression {
+    # The input field is required, but the row-pattern reference can still
+    # evaluate to null when A denotes zero rows.
+    selection {
+      row_pattern_variable_reference {
+        pattern_variable {
+          name: "A"
+        }
+      }
+      direct_reference {
+        struct_field {
+          field: 1
+        }
+      }
+    }
+  }
+}
+
+measures {
+  name: "match_number"
+  expression {
+    row_pattern {
+      match_number {
+      }
+      output_type {
+        i64 {
+          nullability: NULLABILITY_REQUIRED
+        }
+      }
+    }
+  }
+}
+
+rows_per_match {
+  one_row {
+  }
+}
+
+after_match_skip {
+  past_last_row {
+  }
+}
+
+pattern {
+  quantified {
+    pattern {
+      variable {
+        name: "A"
+      }
+    }
+    quantifier {
+      lower_bound: 0
+      upper_bound: 1
+    }
+  }
+}
+
+definitions {
+  pattern_variable: "A"
+  condition {
+    literal {
+      boolean: false
+    }
+  }
+}

@@ -1,5 +1,6 @@
 arrange:
   - field_references.md
+  - row_pattern_expressions.md
   - scalar_functions.md
   - aggregate_functions.md
   - specialized_record_expressions.md

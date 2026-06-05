@@ -1,0 +1,107 @@
+# MATCH_RECOGNIZE example for metadata measures.
+#
+# message MatchRecognizeRel
+
+common {
+  direct {
+  }
+}
+
+input {
+  read {
+    common {
+      direct {
+      }
+    }
+    base_schema {
+      names: "ts"
+      names: "price"
+      struct {
+        types {
+          i64 {
+            nullability: NULLABILITY_REQUIRED
+          }
+        }
+        types {
+          fp64 {
+            nullability: NULLABILITY_NULLABLE
+          }
+        }
+        nullability: NULLABILITY_REQUIRED
+      }
+    }
+    named_table {
+      names: "market_data"
+    }
+  }
+}
+
+sorts {
+  expr {
+    selection {
+      root_reference {
+      }
+      direct_reference {
+        struct_field {
+          field: 0
+        }
+      }
+    }
+  }
+  direction: SORT_DIRECTION_ASC_NULLS_LAST
+}
+
+measures {
+  name: "classifier"
+  expression {
+    row_pattern {
+      classifier {
+      }
+      output_type {
+        string {
+          nullability: NULLABILITY_NULLABLE
+        }
+      }
+    }
+  }
+}
+
+measures {
+  name: "match_number"
+  expression {
+    row_pattern {
+      match_number {
+      }
+      output_type {
+        i64 {
+          nullability: NULLABILITY_REQUIRED
+        }
+      }
+    }
+  }
+}
+
+rows_per_match {
+  one_row {
+  }
+}
+
+after_match_skip {
+  past_last_row {
+  }
+}
+
+pattern {
+  concat {
+    patterns {
+      variable {
+        name: "A"
+      }
+    }
+    patterns {
+      variable {
+        name: "B"
+      }
+    }
+  }
+}

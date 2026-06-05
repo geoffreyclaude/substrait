@@ -64,3 +64,17 @@ def test_validate_field_references():
         validate_example(
             textproto_file.read_text(), algebra_pb2.Expression.FieldReference
         )
+
+
+def test_validate_row_pattern_expressions():
+    """Validate row pattern expression examples."""
+    examples_dir = Path("site/examples/proto-textformat/row_pattern_expression")
+    for textproto_file in examples_dir.glob("*.textproto"):
+        validate_example(textproto_file.read_text(), algebra_pb2.RowPatternExpression)
+
+
+def test_validate_match_recognize_relations():
+    """Validate match recognize relation examples."""
+    examples_dir = Path("site/examples/proto-textformat/match_recognize")
+    for textproto_file in examples_dir.glob("*.textproto"):
+        validate_example(textproto_file.read_text(), algebra_pb2.MatchRecognizeRel)

@@ -5,6 +5,7 @@ metadata:
 
 supported_expressions:
   - LITERAL
+  - ROW_PATTERN
   - SELECTION
   - SCALAR_FUNCTION
   - expression: CAST

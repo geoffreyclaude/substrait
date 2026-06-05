@@ -1,0 +1,16 @@
+# Access field 2 from the row bound to primary pattern variable A.
+# Equivalent SQL-style scoped reference: A.price
+#
+# message Expression.FieldReference
+
+row_pattern_variable_reference {
+  pattern_variable {
+    name: "A"
+  }
+}
+
+direct_reference {
+  struct_field {
+    field: 2
+  }
+}
